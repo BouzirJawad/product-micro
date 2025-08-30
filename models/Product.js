@@ -22,9 +22,13 @@ const productSchema = new mongoose.Schema({
         required: [true, "Category is required"],
         enum: ["machines", "tools", "materials"],
     },
-    imageUrl: {
+    image: {
         type: String,
-        required: [true, "Image URL is required"],
+        required: [true, "Image is required"],
+    },
+    imagePublicId: {
+        type: String,
+        required: true
     },
     stock: {
         type: Number,

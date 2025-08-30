@@ -1,5 +1,13 @@
 const Product = require("../models/Product");
 const { validationResult } = require("express-validator");
+const cloudinary = require("../config/cloudinary")
+
+// const getPublicId = (imageUrl) => {
+//   const parts = imageUrl.split("/");
+//   const filename = parts[parts.length - 1];
+//   const publicId = filename.split(".")[0];
+//   return `products/${publicId}`;
+// };
 
 const createProduct = async (req, res) => {
   const errors = validationResult(req);
@@ -9,13 +17,33 @@ const createProduct = async (req, res) => {
   }
 
   try {
-    const { name } = req.body;
-    const product = await Product.find({ name: name });
+    const { name, description, price, category, stock } = req.body;
+    const product = await Product.findOne({ name });
 
     if (product) {
-      return res.status(404).json({ message: "Product already exists" });
+      return res.status(400).json({ message: "Product already exists" });
     }
-    const newProduct = new Product(req.body);
+
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ message: "Image is required" })
+    }
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "products"
+    })
+
+    fs.unlinkSync(req.file.path)
+
+    const newProduct = new Product({
+      name,
+      description,
+      price,
+      category,
+      stock, 
+      image: result.secure_url,
+      imagePublicId: result.public_id
+    });
+
     await newProduct.save();
 
     res.status(201).josn({ message: "Product created successfully!", product });
@@ -54,16 +82,36 @@ const getProductById = async (req, res) => {
 const updateProduct = async (req, res) => {
     const { productId } = req.params
     try {
+        const product = await Product.findById(productId)
+
+        if (!product) {
+          return res.status(404).json({ message: "Product not found!"})
+        }
+
+        let updatedData = { ...req.body }
+
+        if (req.file && req.file.path) {
+          if (product.image && product.imagePublicId) {
+            await cloudinary.uploader.destroy(product.imagePublicId)
+          }
+
+          const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: "products"
+          })
+
+          fs.unlinkSync(req.file.path)
+
+          updatedData.image = result.secure_url
+          updatedData.imagePublicId = result.public_id
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
           productId,
-          { $set: req.body },
+          updatedData,
           { new: true, runValidators: true }
         )
 
-        if (!updatedProduct) {
-          return res.status(404).json({ message: "Product not found!"})
-        }
-        res.status(201).json(updatedProduct)
+        res.status(201).json({ message: "Product updated successfully!", updatedProduct: updatedProduct })
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
@@ -76,6 +124,10 @@ const deleteProduct = async (req, res) => {
 
     if (!product) {
       return res.status(500).json({ message: "Product not found!"})
+    }
+
+    if (product.image && product.imagePublicId) {
+      await cloudinary.uploader.destroy(product.imagePublicId)
     }
 
     await Product.findByIdAndDelete(productId)
