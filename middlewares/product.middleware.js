@@ -5,6 +5,5 @@ exports.validateProduct = [
     body("description").isLength({ min: 10, max: 1000 }).withMessage("Description must be at least 10 characters (max 1000)"),
     body("price").isFloat({ min: 0 }).withMessage("Proce must be a positive number"),
     body("category").isIn(["machines", "tools", "materials"]).withMessage("Invalid category"),
-    body("imageUrl").isURL().withMessage("Image must be a valid URL"), 
-    body("stock").isInt({ min: 0 }).withMessage("Stock must be a positive number")
+    body("stock").isInt({ min: 0 }).withMessage("Stock must be a positive number"),
 ]
