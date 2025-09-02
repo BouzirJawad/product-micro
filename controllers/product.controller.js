@@ -3,13 +3,6 @@ const { validationResult } = require("express-validator");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 
-// const getPublicId = (imageUrl) => {
-//   const parts = imageUrl.split("/");
-//   const filename = parts[parts.length - 1];
-//   const publicId = filename.split(".")[0];
-//   return `products/${publicId}`;
-// };
-
 const createProduct = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -23,6 +16,7 @@ const createProduct = async (req, res) => {
     const product = await Product.findOne({ name });
 
     if (product) {
+      fs.unlinkSync(req.file.path)
       return res.status(400).json({ message: "Product already exists" });
     }
 
